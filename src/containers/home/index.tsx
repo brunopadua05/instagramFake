@@ -1,9 +1,9 @@
+import { Alert, Image, RefreshControl, ScrollView, StyleSheet, Vibration, View } from 'react-native';
 import { Avatar, Button, Card, Divider, Layout, Text } from '@ui-kitten/components';
-import { Image, ScrollView, StyleSheet, View, Alert } from 'react-native';
 import React, { Component, } from 'react';
 import { inject, observer } from 'mobx-react';
 
-import { CameraApp } from '../../components/camera.component';
+import { Camera } from '../../components/camera.component';
 import HomeStore from '../../stores/home.store';
 
 interface Props {
@@ -15,17 +15,28 @@ interface Props {
 @observer
 export default class Home extends Component<Props> {
 
-  async componentDidMount() {
+  componentDidMount() {
+    this.getPosts()
+  }
+
+  async getPosts() {
     const { getPosts } = this.props.homeStore;
-    await getPosts();
+    try {
+      await getPosts();
+    } catch (error) {
+      Vibration.vibrate(3 * 1000)
+      Alert.alert(
+        "Erro",
+        error.message
+      );
+    }
   }
 
   render() {
 
-    const { posts, photoReady, toogleStatus } = this.props.homeStore;
+    const { posts, photoReady, toogleStatus, addPost, loading } = this.props.homeStore;
 
     const uploadPhoto = (uri?: string) => {
-      const { addPost } = this.props.homeStore;
       if (uri) {
         Alert.alert(
           "Confirmação",
@@ -45,12 +56,13 @@ export default class Home extends Component<Props> {
 
     return (
       <Layout style={{ flex: 1 }}>
-        <ScrollView>
-          <CameraApp status={photoReady} onTakeCamera={(uri) => uploadPhoto(uri)} />
-
-          {photoReady == false && <Button onPress={() => toogleStatus(true)}>Postar</Button>}
-
-          {photoReady == false && posts.map((post, index) => (
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={() => this.getPosts()} />
+          }>
+          <Camera status={photoReady} onTakeCamera={(uri) => uploadPhoto(uri)} />
+          {photoReady === false && <Button onPress={() => toogleStatus(true)}>Postar</Button>}
+          {photoReady === false && posts.map((post, index) => (
             <Card key={index} style={styles.card}>
               <View style={styles.header}>
                 <Avatar
@@ -64,35 +76,35 @@ export default class Home extends Component<Props> {
               <View style={styles.footer}>
                 <Text style={styles.title}>{post.description}</Text>
               </View>
-            </Card>))
-          }
+            </Card>))}
         </ScrollView>
-      </Layout >);
+      </Layout>);
   }
 }
 
 const styles = StyleSheet.create({
-  card: { 
-    padding: 1, 
-    margin: 4, 
-    backgroundColor: 'black' },
+  card: {
+    padding: 1,
+    margin: 4,
+    backgroundColor: 'black'
+  },
   header: {
     padding: 3,
     alignItems: 'center',
-    flexDirection: 'row'
+    flexDirection: 'row',
   },
   scrollView: {
     backgroundColor: 'black',
     color: 'white',
     marginHorizontal: 20,
   },
-  avatar: { 
-    marginRight: 5 
+  avatar: {
+    marginRight: 5
   },
-  picture: { 
-    width: 'auto', 
-    minHeight: 200, 
-    maxHeight: 500 
+  picture: {
+    width: 'auto',
+    minHeight: 200,
+    maxHeight: 400
   },
   footer: {
     margin: 4,
@@ -101,6 +113,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row'
   },
   title: {
-    fontSize: 15,
-  },
-});
+    fontSize: 15
+  }
+})
